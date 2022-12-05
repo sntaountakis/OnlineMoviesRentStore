@@ -1,3 +1,4 @@
+from flask import request, abort, jsonify
 import requests
 from functools import wraps
 import json
@@ -29,6 +30,34 @@ class KeyRockAPI():
         return wrapped
 
 
+    def require_auth(self, f):
+        def wrapped(*args, **kwargs):
+
+            # Check user token from request args
+            if request.method == 'GET':
+                token = request.args.get('token')
+            else:
+                token = request.json.get('token')
+            
+            if not token:
+                error_dict = {"error": {"code": 400,
+                            "message": "Token not included in request",
+                            "title": "Bad Request"}}
+                response = jsonify(error_dict)
+                response.status_code = 400
+                abort(response)
+            
+            # Get valid user from request
+            resp = self.get_user_from_token(token)
+            
+            if resp.status_code != 200:
+                abort(resp.status_code, resp.json())
+            
+            
+            return f(*args, **kwargs)
+        return wrapped
+
+
     @update_admin_token
     def get_user_token(self, email, password):
         values = {
@@ -43,7 +72,6 @@ class KeyRockAPI():
         resp = requests.post('http://localhost:3000/v1/auth/tokens', data=json.dumps(values), headers=headers)
         return resp.headers['X-Subject-Token']
         
-
     @update_admin_token
     def register_user(self, username, email, password):
         values = {
@@ -69,4 +97,4 @@ class KeyRockAPI():
         }
         
         resp = requests.get('http://localhost:3000/v1/auth/tokens', headers=headers)
-        return resp.json()
+        return resp
