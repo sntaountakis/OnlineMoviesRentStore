@@ -1,6 +1,9 @@
 
 from flask import Flask
+from api.keyrock.keyrock import KeyRockAPI
 import requests
+
+kr = KeyRockAPI()
 
 def create_app(test_config=None):
     app = Flask(__name__)
